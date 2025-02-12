@@ -10,6 +10,7 @@ import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
+import pages.HepsiburadaLocators;
 import pages.Methods;
 import utilities.MyDriver;
 
@@ -36,44 +37,43 @@ public class HepsiburadaTest {
 
     @When("The user navigates to the Electronics -> Tablet category")
     public void navigateToTabletCategory() {
-        WebElement electronicsCategory = methods.waitForElement(By.xpath("//*[text()='Elektronik']//parent::*[@class='sf-MenuItems-UHHCg2qrE5_YBqDV_7AC']"));
+        WebElement electronicsCategory = methods.waitForElement(HepsiburadaLocators.ELECTRONICS_CATEGORY);
         electronicsCategory.click();
 
         Actions action = new Actions(driver);
-        WebElement pcTabletCategory = methods.waitForElement(By.xpath("//a[text()='Bilgisayar/Tablet']//parent::li"));
+        WebElement pcTabletCategory = methods.waitForElement(HepsiburadaLocators.PC_TABLET_CATEGORY);
         action.moveToElement(pcTabletCategory).perform();
 
-        WebElement tabletCategory = methods.waitForElement(By.xpath("//a[text()='Tablet']//parent::li"));
+        WebElement tabletCategory = methods.waitForElement(HepsiburadaLocators.TABLET_CATEGORY);
         tabletCategory.click();
     }
 
-    @When("The user applies filters for Brand -> Apple and Screen Size -> 13.2 inches")
-    public void applyFilters() {
-        WebElement brandFilter = methods.waitForElement(By.xpath("//span[text()='Apple']//parent::a"));
+    @When("The user applies filters for Brand -> {string} and Screen Size -> {string}")
+    public void applyFilters(String brand, String screenSize) {
+        WebElement brandFilter = methods.waitForElement(By.xpath("//span[text()='" + brand + "']//parent::a"));
         brandFilter.click();
 
-        WebElement screenSizeFilter = methods.waitForElement(By.xpath("//span[text()='13,2 inç']//parent::a"));
+        WebElement screenSizeFilter = methods.waitForElement(By.xpath("//span[text()='" + screenSize + "']//parent::a"));
         screenSizeFilter.click();
     }
 
     @When("The user clicks on the highest priced product")
     public void clickOnMostExpensiveProduct() {
-        // Get all product prices on the page
-        List<WebElement> priceElements = driver.findElements(By.xpath("//div[@data-test-id='price-current-price']"));
+        List<WebElement> priceElements = driver.findElements(HepsiburadaLocators.PRODUCT_PRICES);
 
         for (WebElement priceElement : priceElements) {
             String priceText = priceElement.getText().replace(" TL", "").replace(".", "").replace(",", ".");
             double price = Double.parseDouble(priceText);
             if (price > maxPrice) {
                 maxPrice = price;
-                highestPriceProductContainer = priceElement.findElement(By.xpath(".//ancestor::li[contains(@type, 'comfort')]"));
+                highestPriceProductContainer = priceElement.findElement(HepsiburadaLocators.PRODUCT_CONTAINER);
             }
         }
         System.out.println("Max price: " + maxPrice + " TL");
     }
 
     @When("The user adds the product to the cart")
-    public void addToCart() throws InterruptedException {
+    public void addToCart() {
         if (highestPriceProductContainer != null) {
             methods.hoverOverElement(highestPriceProductContainer);
             highestPriceProductContainer.click();
@@ -85,7 +85,7 @@ public class HepsiburadaTest {
                     break;
                 }
             }
-            WebElement addToCartButton = methods.waitForElement(By.xpath("//*[@data-test-id='addToCart']"));
+            WebElement addToCartButton = methods.waitForElement(HepsiburadaLocators.ADD_TO_CART_BUTTON);
             JavascriptExecutor executor = (JavascriptExecutor) driver;
             executor.executeScript("arguments[0].click();", addToCartButton);
             System.out.println("Highest price product added to the cart");
@@ -94,20 +94,28 @@ public class HepsiburadaTest {
         } else {
             System.out.println("Highest price product could not be found.");
         }
-        Thread.sleep(5000);
+        waitFor(5000);
+    }
+
+    public void waitFor(Integer duration) {
+        try {
+            Thread.sleep(duration);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Then("The user verifies that the product is added to the cart and the price is correct")
     public void verifyProductInCart() {
-        WebElement cartIcon = methods.waitForElement(By.id("shoppingCart"));
+        WebElement cartIcon = methods.waitForElement(HepsiburadaLocators.CART_ICON);
         cartIcon.click();
 
-        WebElement cartPriceElement = methods.waitForElementToBeVisible(By.xpath("//div[@class='product_price_uXU6Q']"));
+        WebElement cartPriceElement = methods.waitForElementToBeVisible(HepsiburadaLocators.CART_PRICE);
         String cartPriceText = cartPriceElement.getText().replace(" TL", "").trim();
 
-        cartPriceText = cartPriceText.replaceAll(",", "\\.");  // Replace the first comma if multiple commas are there
+        cartPriceText = cartPriceText.replaceAll(",", "\\.");
 
-        cartPriceText = cartPriceText.replaceAll("\\.(?=.*\\.)", "");  // Remove any extra dots except the last one (in case of decimal points)
+        cartPriceText = cartPriceText.replaceAll("\\.(?=.*\\.)", "");
 
         double cartPrice = Double.parseDouble(cartPriceText);
 
